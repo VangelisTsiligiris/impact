@@ -1,5 +1,7 @@
 import streamlit as st
-import io
+from io import BytesIO
+from docx import Document
+from docx.shared import Pt, RGBColor
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -8,7 +10,21 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- Data Definitions (Translated from React) ---
+# --- CSS Tweaks for cleaner UI ---
+st.markdown("""
+    <style>
+    .stSlider {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+    div[data-testid="stExpander"] details summary p {
+        font-weight: 600;
+        font-size: 1rem;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- Data Definitions ---
 DIMENSIONS = [
     {
         'id': 'integration',
@@ -111,14 +127,52 @@ def get_score_interpretation(score):
     return "High", "green"
 
 def reset_state():
-    """Resets all session state variables to default."""
     st.session_state.company_name = ""
     for dim in DIMENSIONS:
         st.session_state[f"score_{dim['id']}"] = 50
         st.session_state[f"note_{dim['id']}"] = ""
 
+def generate_word_doc(company_name, avg_score):
+    doc = Document()
+    
+    # Title
+    doc.add_heading('FINTECH IMPACT RADAR ANALYSIS', 0)
+    
+    p = doc.add_paragraph()
+    run = p.add_run(f"Company: {company_name if company_name else 'Not specified'}")
+    run.bold = True
+    
+    # Overall Score
+    doc.add_heading(f'Overall Impact Score: {avg_score}/100', level=1)
+    
+    for dim in DIMENSIONS:
+        score = st.session_state[f"score_{dim['id']}"]
+        notes = st.session_state[f"note_{dim['id']}"]
+        interp, _ = get_score_interpretation(score)
+        
+        # Dimension Header
+        doc.add_heading(f"{dim['title']} ({score}/100 - {interp})", level=2)
+        
+        # Subtitle and Question
+        doc.add_paragraph(f"{dim['subtitle']}", style='Intense Quote')
+        doc.add_paragraph(f"Question: {dim['question']}")
+        
+        # Notes
+        doc.add_heading('Analysis / Evidence:', level=3)
+        if notes:
+            doc.add_paragraph(notes)
+        else:
+            doc.add_paragraph("No notes recorded.", style='No Spacing')
+            
+        doc.add_paragraph("_" * 50) # Divider line
+
+    # Save to memory
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
 # --- Initialize Session State ---
-# We use a unique key for every widget to persist data
 if 'company_name' not in st.session_state:
     st.session_state.company_name = ""
 
@@ -133,9 +187,7 @@ for dim in DIMENSIONS:
 # --- Main Layout ---
 
 st.title("The Fintech :blue[IMPACT] Radar")
-st.markdown("""
-Where does your fintech example sit on these six theoretical dimensions?
-""")
+st.markdown("Where does your fintech example sit on these six theoretical dimensions?")
 
 # Input: Company Name
 st.text_input(
@@ -148,115 +200,104 @@ st.markdown("---")
 
 # Loop through dimensions to create UI cards
 for dim in DIMENSIONS:
-    # Create a container for the visual "card" effect
     with st.container(border=True):
-        # Top Section: Header & Score Display
-        col_info, col_score = st.columns([3, 1])
+        # --- Top Row: Header & Score ---
+        col_info, col_score = st.columns([3, 1.2])
         
         current_score = st.session_state[f"score_{dim['id']}"]
         interp_text, interp_color = get_score_interpretation(current_score)
 
         with col_info:
             st.subheader(f"{dim['icon']} {dim['title']}")
-            st.caption(dim['subtitle'])
-            st.markdown(f"*{dim['question']}*")
+            st.caption(f"**{dim['subtitle']}**")
+            st.markdown(f"_{dim['question']}_")
 
         with col_score:
+            # Clean vertical alignment for score
             st.markdown(
-                f"<div style='text-align: center;'>"
-                f"<h2 style='color:{interp_color}; margin:0;'>{current_score}</h2>"
-                f"<span style='color:{interp_color}; font-weight:bold;'>{interp_text}</span>"
-                f"</div>", 
+                f"""
+                <div style='text-align: center; background-color: #f8f9fa; padding: 10px; border-radius: 10px;'>
+                    <h2 style='color:{interp_color}; margin:0; font-size: 2.2em;'>{current_score}</h2>
+                    <span style='color:{interp_color}; font-weight:bold; font-size: 0.9em; text-transform: uppercase;'>{interp_text}</span>
+                </div>
+                """, 
                 unsafe_allow_html=True
             )
 
-        # Middle Section: Slider
-        st.write("") # Spacer
-        
-        # Labels above slider
-        c_left, c_right = st.columns(2)
-        c_left.caption(f"◀ {dim['leftLabel']}")
-        c_right.caption(f"<div style='text-align: right;'>{dim['rightLabel']} ▶</div>", unsafe_allow_html=True)
+        st.write("") # Vertical Spacer
+
+        # --- Middle Row: Slider ---
+        # Using columns to push labels to far edges
+        c_left, c_right = st.columns([1, 1])
+        c_left.markdown(f"<small>◀ {dim['leftLabel']}</small>", unsafe_allow_html=True)
+        c_right.markdown(f"<div style='text-align: right;'><small>{dim['rightLabel']} ▶</small></div>", unsafe_allow_html=True)
         
         st.slider(
             label=f"Score for {dim['title']}",
-            label_visibility="collapsed", # Hide label as we have custom ones
+            label_visibility="collapsed",
             min_value=0,
             max_value=100,
-            key=f"score_{dim['id']}" # Binds directly to session state
+            key=f"score_{dim['id']}"
         )
 
-        # Bottom Section: Expandable Details
-        with st.expander("🤔 Challenge Prompts & Notes"):
-            st.markdown("**Critical Questions:**")
+        # --- Bottom Row: Expander (Cleaner UI) ---
+        st.markdown("---") # Divider to separate inputs from slider
+        
+        with st.expander(f"📝 Enter Evidence & Notes for {dim['title']}"):
+            st.markdown("**Challenge Prompts:**")
             for prompt in dim['challengePrompts']:
                 st.markdown(f"- {prompt}")
             
-            st.markdown("**Your Evidence/Notes:**")
+            st.write("")
             st.text_area(
-                label=f"Notes for {dim['title']}",
-                label_visibility="collapsed",
-                placeholder="Record your justification and evidence here...",
-                key=f"note_{dim['id']}"
+                label="Your Notes",
+                placeholder="Record your justification here...",
+                key=f"note_{dim['id']}",
+                height=100
             )
 
 # --- Footer Analysis Section ---
-st.markdown("### Overall IMPACT Score")
+st.header("Analysis Summary")
 
 total_score = sum(st.session_state[f"score_{dim['id']}"] for dim in DIMENSIONS)
 avg_score = round(total_score / 6)
 
-# Display Big Average Score
 with st.container(border=True):
     f_col1, f_col2 = st.columns([1, 3])
     
     with f_col1:
-         st.markdown(f"<h1 style='text-align: center; font-size: 4rem; color: #2563eb;'>{avg_score}</h1>", unsafe_allow_html=True)
+         st.markdown(f"<div style='display: flex; justify-content: center; align-items: center; height: 100%;'><h1 style='font-size: 4.5rem; color: #2563eb; margin: 0;'>{avg_score}</h1></div>", unsafe_allow_html=True)
+         st.markdown("<div style='text-align: center;'><strong>AVG SCORE</strong></div>", unsafe_allow_html=True)
     
     with f_col2:
         # Mini grid of scores
+        st.write("") # alignment spacer
         cols = st.columns(6)
         for idx, dim in enumerate(DIMENSIONS):
             with cols[idx]:
-                st.caption(dim['letter'])
-                st.markdown(f"**{st.session_state[f'score_{dim['id']}']}**")
+                st.markdown(f"<div style='text-align: center;'><b>{dim['letter']}</b><br>{st.session_state[f'score_{dim['id']}']}</div>", unsafe_allow_html=True)
         
-        st.caption("Be prepared to justify each placement with evidence from your research.")
+        st.write("")
+        st.info("Ready to export? Click the button below to download your analysis as a Word Document.")
 
 # --- Export & Reset Logic ---
 st.markdown("---")
 btn_col1, btn_col2 = st.columns([1, 1])
 
 with btn_col1:
-    # Generate the text for download
-    results_text = f"FINTECH IMPACT RADAR ANALYSIS\n"
-    results_text += f"Company: {st.session_state.company_name or 'Not specified'}\n\n"
+    # Create the word doc in memory
+    docx_file = generate_word_doc(st.session_state.company_name, avg_score)
     
-    for dim in DIMENSIONS:
-        s = st.session_state[f"score_{dim['id']}"]
-        n = st.session_state[f"note_{dim['id']}"] or "No notes"
-        i_text, _ = get_score_interpretation(s)
-        results_text += f"[{dim['letter']}] {dim['title']}: {s}/100 ({i_text})\n"
-        results_text += f"Notes: {n}\n\n"
-    
-    results_text += f"Overall Assessment Average Score: {avg_score}"
-
     st.download_button(
-        label="📥 Export Analysis",
-        data=results_text,
-        file_name=f"{st.session_state.company_name or 'fintech'}-impact-radar.txt",
-        mime="text/plain",
-        type="primary"
+        label="📄 Download Word Doc (.docx)",
+        data=docx_file,
+        file_name=f"{st.session_state.company_name or 'fintech'}-impact-radar.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        type="primary",
+        use_container_width=True
     )
 
 with btn_col2:
-    if st.button("🔄 Reset All"):
+    if st.button("🔄 Reset All", use_container_width=True):
         reset_state()
         st.rerun()
-
-# --- Teacher Note ---
-st.info(
-    "**Teacher Note:** After presentations, challenge students on their highest scores. "
-    "Ask for concrete evidence rather than accepting general claims. This transforms descriptive "
-    "presentations into critical analysis exercises."
-)
