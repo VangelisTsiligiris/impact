@@ -700,6 +700,6 @@ for row in range(3):
 st.markdown("---")
 st.markdown(f"""
 <div style='text-align: center; color: #6c757d; padding: 1rem;'>
-    <p style='margin: 0; font-size: 0.9rem;'>Fintech IMPACT Radar | Analysis Date: {datetime.now().strftime("%Y-%m-%d")}</p>
+    <p style='margin: 0; font-size: 0.9rem;'>Fintech IMPACT Radar by Professor Vangelis Tsiligkiris | Analysis Date: {datetime.now().strftime("%Y-%m-%d")}</p>
 </div>
 """, unsafe_allow_html=True)
