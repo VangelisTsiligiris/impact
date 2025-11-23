@@ -260,6 +260,8 @@ DIMENSIONS = [
         'icon': '🔗',
         'title': 'Integration',
         'subtitle': 'Connectivity',
+        'color': '#0d6efd',
+        'lightColor': '#e7f1ff',
         'question': 'Is it an Island or an Ecosystem?',
         'leftLabel': 'Closed / Island',
         'rightLabel': 'Open API Platform',
@@ -275,6 +277,8 @@ DIMENSIONS = [
         'icon': '💰',
         'title': 'Monetization',
         'subtitle': 'Unit Economics',
+        'color': '#198754',
+        'lightColor': '#d1f4e8',
         'question': 'Growth at all costs or sustainable?',
         'leftLabel': 'Burning Cash',
         'rightLabel': 'Sustainable Profit',
@@ -290,6 +294,8 @@ DIMENSIONS = [
         'icon': '🩹',
         'title': 'Pain Point',
         'subtitle': 'Differentiation',
+        'color': '#dc3545',
+        'lightColor': '#ffe5e8',
         'question': 'Vitamin or Painkiller?',
         'leftLabel': 'Nice-to-have (UI)',
         'rightLabel': '10x Solution',
@@ -305,6 +311,8 @@ DIMENSIONS = [
         'icon': '🤖',
         'title': 'Automation',
         'subtitle': 'Tech Depth',
+        'color': '#6610f2',
+        'lightColor': '#f0e7ff',
         'question': 'Wrapper or Deep Tech?',
         'leftLabel': 'Human/Manual',
         'rightLabel': 'AI/Algorithmic',
@@ -320,6 +328,8 @@ DIMENSIONS = [
         'icon': '⚖️',
         'title': 'Compliance',
         'subtitle': 'Trust',
+        'color': '#fd7e14',
+        'lightColor': '#fff3e6',
         'question': 'Regulatory Arbitrage or Trust?',
         'leftLabel': 'Grey Area',
         'rightLabel': 'Fully Licensed',
@@ -335,6 +345,8 @@ DIMENSIONS = [
         'icon': '🎯',
         'title': 'Target',
         'subtitle': 'Inclusion',
+        'color': '#0dcaf0',
+        'lightColor': '#e7f8fc',
         'question': 'Mass Market or Niche?',
         'leftLabel': 'Mass Market',
         'rightLabel': 'Underserved Niche',
@@ -609,15 +621,14 @@ with col2:
     
     for dim in DIMENSIONS:
         score = st.session_state[f"score_{dim['id']}"]
-        color = get_score_color(score)
         
         col_icon, col_name, col_score = st.columns([0.5, 3, 1])
         with col_icon:
-            st.markdown(dim['icon'])
+            st.markdown(f"<div style='color: {dim['color']}; font-size: 1.2rem;'>{dim['icon']}</div>", unsafe_allow_html=True)
         with col_name:
             st.markdown(f"**{dim['title']}**")
         with col_score:
-            st.markdown(f"<span style='color: {color}; font-weight: 700;'>{score}</span>", unsafe_allow_html=True)
+            st.markdown(f"<span style='color: {dim['color']}; font-weight: 700;'>{score}</span>", unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -636,17 +647,27 @@ for row in range(3):
             dim = DIMENSIONS[dim_idx]
             
             with cols[col_idx]:
-                st.markdown(f"<div class='dimension-card'>", unsafe_allow_html=True)
-                
-                # Header
-                c1, c2 = st.columns([3, 1])
-                with c1:
-                    st.markdown(f"<div class='dimension-title'>{dim['icon']} {dim['title']}</div>", unsafe_allow_html=True)
-                    st.caption(dim['subtitle'])
-                with c2:
-                    score = st.session_state[f"score_{dim['id']}"]
-                    color = get_score_color(score)
-                    st.markdown(f"<div style='text-align: right; font-size: 1.5rem; font-weight: 700; color: {color};'>{score}</div>", unsafe_allow_html=True)
+                # Color-coded header bar
+                st.markdown(f"""
+                    <div style='background: {dim['lightColor']}; padding: 0.75rem 1rem; 
+                                border-radius: 8px 8px 0 0; border-left: 4px solid {dim['color']};'>
+                        <div style='display: flex; justify-content: space-between; align-items: center;'>
+                            <div>
+                                <div style='font-size: 1.1rem; font-weight: 600; color: #2d3748;'>
+                                    {dim['icon']} {dim['title']}
+                                </div>
+                                <div style='font-size: 0.85rem; color: #6c757d; margin-top: 0.15rem;'>
+                                    {dim['subtitle']}
+                                </div>
+                            </div>
+                            <div style='font-size: 1.5rem; font-weight: 700; color: {dim['color']};'>
+                                {st.session_state[f"score_{dim['id']}"]}
+                            </div>
+                        </div>
+                    </div>
+                    <div style='background: white; border: 1px solid #e9ecef; 
+                                border-top: none; border-radius: 0 0 8px 8px; padding: 1rem;'>
+                """, unsafe_allow_html=True)
                 
                 st.markdown(f"<div class='dimension-question'>{dim['question']}</div>", unsafe_allow_html=True)
                 
@@ -695,7 +716,8 @@ for row in range(3):
                         label_visibility="collapsed"
                     )
                 
-                st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown("</div></div>", unsafe_allow_html=True)
+                st.markdown("")
 
 st.markdown("---")
 st.markdown(f"""
